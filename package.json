@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.1",
     "autoprefixer": "^10.4.22",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.2",
