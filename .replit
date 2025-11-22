@@ -27,7 +27,7 @@ localPort = 33473
 externalPort = 3000
 
 [[ports]]
-localPort = 43831
+localPort = 46369
 externalPort = 3001
 
 [agent]
@@ -61,4 +61,4 @@ outputType = "webview"
 [userenv]
 
 [userenv.shared]
-MONGODB_URI = "mongodb+srv://kametiapps_db_user:<qygCzyFGUYn577Ds>@cluster0.bx4qiju.mongodb.net/?appName=Cluster0"
+MONGODB_URI = "mongodb+srv://kametiapps_db_user:qygCzyFGUYn577Ds@cluster0.bx4qiju.mongodb.net/?appName=Cluster0"

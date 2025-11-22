@@ -11,7 +11,20 @@ const nextConfig: NextConfig = {
     allowedDevOrigins: [
       'https://*.replit.dev',
       'https://*.repl.co',
+      'https://*.spock.replit.dev',
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
+        ],
+      },
+    ];
   },
 };
 
