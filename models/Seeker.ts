@@ -9,6 +9,7 @@ const SeekerSchema = new Schema({
   experience: { type: String },
   education: { type: String },
   resume: { type: String },
+  status: { type: String, default: 'active', enum: ['active', 'banned'] },
 }, { timestamps: true });
 
 export default models.Seeker || model('Seeker', SeekerSchema);

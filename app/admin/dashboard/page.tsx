@@ -1,34 +1,227 @@
 'use client';
 
-import { useState } from 'react';
-import { FaBriefcase, FaUsers, FaBuilding, FaChartLine, FaEdit, FaTrash, FaBan, FaCheckCircle, FaEye, FaCalendar } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import { FaBriefcase, FaUsers, FaBuilding, FaChartLine, FaEdit, FaTrash, FaBan, FaCheckCircle, FaEye, FaCalendar, FaSpinner } from 'react-icons/fa';
 
-const stats = {
-  totalJobs: 156,
-  activeJobs: 98,
-  totalUsers: 2340,
-  totalEmployers: 145,
-  totalSeekers: 2195,
-  totalApplications: 5678,
-  revenue: '$12,450'
-};
+interface Stats {
+  totalJobs: number;
+  activeJobs: number;
+  totalUsers: number;
+  totalEmployers: number;
+  totalSeekers: number;
+  totalApplications: number;
+  revenue: string;
+}
 
-const recentJobs = [
-  { _id: '1', title: 'Senior Software Engineer', company: 'TechCorp Inc.', employer: 'John Doe', status: 'active', applications: 45, posted: '2025-11-20' },
-  { _id: '2', title: 'Product Manager', company: 'Innovation Labs', employer: 'Jane Smith', status: 'active', applications: 32, posted: '2025-11-18' },
-  { _id: '3', title: 'UX Designer', company: 'Creative Studio', employer: 'Mike Johnson', status: 'pending', applications: 0, posted: '2025-11-21' },
-  { _id: '4', title: 'Data Scientist', company: 'Analytics Pro', employer: 'Sarah Wilson', status: 'active', applications: 28, posted: '2025-11-17' },
-];
+interface Job {
+  _id: string;
+  title: string;
+  company: string;
+  status: string;
+  createdAt: string;
+  [key: string]: any;
+}
 
-const recentUsers = [
-  { _id: '1', name: 'Alice Brown', email: 'alice@example.com', type: 'seeker', joined: '2025-11-20', status: 'active' },
-  { _id: '2', name: 'Bob Williams', email: 'bob@company.com', type: 'employer', joined: '2025-11-19', status: 'active' },
-  { _id: '3', name: 'Carol Davis', email: 'carol@example.com', type: 'seeker', joined: '2025-11-18', status: 'active' },
-  { _id: '4', name: 'David Miller', email: 'david@startup.com', type: 'employer', joined: '2025-11-17', status: 'pending' },
-];
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  type: string;
+  createdAt: string;
+  status?: string;
+  [key: string]: any;
+}
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState<Stats>({
+    totalJobs: 0,
+    activeJobs: 0,
+    totalUsers: 0,
+    totalEmployers: 0,
+    totalSeekers: 0,
+    totalApplications: 0,
+    revenue: '$0'
+  });
+  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
+  const [recentUsers, setRecentUsers] = useState<User[]>([]);
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  const [jobStatusFilter, setJobStatusFilter] = useState('all');
+  const [jobSearchTerm, setJobSearchTerm] = useState('');
+  const [userTypeFilter, setUserTypeFilter] = useState('all');
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'jobs') {
+      fetchAllJobs();
+    }
+  }, [activeTab, jobStatusFilter, jobSearchTerm]);
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchAllUsers();
+    }
+  }, [activeTab, userTypeFilter, userSearchTerm]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/stats');
+      const result = await response.json();
+      
+      if (result.success) {
+        setStats(result.data.stats);
+        setRecentJobs(result.data.recentJobs);
+        setRecentUsers(result.data.recentUsers);
+      } else {
+        setError(result.error || 'Failed to load dashboard data');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllJobs = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (jobStatusFilter !== 'all') params.append('status', jobStatusFilter);
+      if (jobSearchTerm) params.append('search', jobSearchTerm);
+
+      const response = await fetch(`/api/admin/jobs?${params}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setAllJobs(result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching jobs:', err);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (userTypeFilter !== 'all') params.append('type', userTypeFilter);
+      if (userSearchTerm) params.append('search', userSearchTerm);
+
+      const response = await fetch(`/api/admin/users?${params}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setAllUsers(result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  const deleteJob = async (jobId: string) => {
+    if (!confirm('Are you sure you want to delete this job?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/jobs/${jobId}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Job deleted successfully');
+        fetchAllJobs();
+        fetchDashboardData();
+      } else {
+        alert(result.error || 'Failed to delete job');
+      }
+    } catch (err) {
+      alert('Failed to delete job');
+    }
+  };
+
+  const toggleJobStatus = async (jobId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'closed' : 'active';
+    
+    try {
+      const response = await fetch(`/api/admin/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`Job status updated to ${newStatus}`);
+        fetchAllJobs();
+        fetchDashboardData();
+      } else {
+        alert(result.error || 'Failed to update job status');
+      }
+    } catch (err) {
+      alert('Failed to update job status');
+    }
+  };
+
+  const toggleUserStatus = async (userId: string, userType: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'banned' : 'active';
+    const action = newStatus === 'banned' ? 'ban' : 'unban';
+    
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: userType, status: newStatus }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`User ${action}ned successfully`);
+        fetchAllUsers();
+        fetchDashboardData();
+      } else {
+        alert(result.error || `Failed to ${action} user`);
+      }
+    } catch (err) {
+      alert(`Failed to ${action} user`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <FaSpinner className="animate-spin text-4xl text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-red-50 border border-red-200 rounded-lg p-8 max-w-md">
+          <p className="text-red-600 font-semibold mb-2">Error Loading Dashboard</p>
+          <p className="text-gray-600 text-sm">{error}</p>
+          <button 
+            onClick={fetchDashboardData}
+            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -72,7 +265,7 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Employers</p>
                 <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalEmployers}</p>
-                <p className="text-xs text-green-600 mt-1">↑ 12 This Month</p>
+                <p className="text-xs text-green-600 mt-1">Active Platform</p>
               </div>
               <div className="bg-orange-100 p-4 rounded-full">
                 <FaBuilding className="text-orange-600 text-2xl" />
@@ -85,7 +278,7 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Applications</p>
                 <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalApplications}</p>
-                <p className="text-xs text-green-600 mt-1">↑ 234 This Week</p>
+                <p className="text-xs text-gray-600 mt-1">Total Submitted</p>
               </div>
               <div className="bg-green-100 p-4 rounded-full">
                 <FaChartLine className="text-green-600 text-2xl" />
@@ -145,41 +338,154 @@ export default function AdminDashboard() {
               <div className="space-y-8">
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Jobs</h3>
+                  {recentJobs.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No jobs found. Create some jobs to see them here.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Job Title</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Company</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Posted</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {recentJobs.map((job) => (
+                            <tr key={job._id} className="hover:bg-gray-50">
+                              <td className="px-4 py-4 text-sm font-medium text-gray-800">{job.title}</td>
+                              <td className="px-4 py-4 text-sm text-gray-600">{job.company}</td>
+                              <td className="px-4 py-4 text-sm">
+                                {job.status === 'active' ? (
+                                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
+                                ) : (
+                                  <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">Closed</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-600">
+                                {new Date(job.createdAt).toLocaleDateString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Users</h3>
+                  {recentUsers.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No users found.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Joined</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {recentUsers.map((user) => (
+                            <tr key={user._id} className="hover:bg-gray-50">
+                              <td className="px-4 py-4 text-sm font-medium text-gray-800">{user.name}</td>
+                              <td className="px-4 py-4 text-sm text-gray-600">{user.email}</td>
+                              <td className="px-4 py-4 text-sm">
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                  user.type === 'employer' 
+                                    ? 'bg-orange-100 text-orange-700' 
+                                    : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {user.type === 'employer' ? 'Employer' : 'Seeker'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-600">
+                                {new Date(user.joined || user.createdAt).toLocaleDateString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'jobs' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-gray-800">All Jobs ({allJobs.length})</h3>
+                  <div className="flex gap-3">
+                    <select 
+                      value={jobStatusFilter}
+                      onChange={(e) => setJobStatusFilter(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="active">Active</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Search jobs..."
+                      value={jobSearchTerm}
+                      onChange={(e) => setJobSearchTerm(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                {allJobs.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    No jobs found. {jobSearchTerm || jobStatusFilter !== 'all' ? 'Try adjusting your filters.' : 'Create some jobs to see them here.'}
+                  </div>
+                ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Job Title</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Company</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Employer</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Applications</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Posted</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {recentJobs.map((job) => (
+                        {allJobs.map((job) => (
                           <tr key={job._id} className="hover:bg-gray-50">
                             <td className="px-4 py-4 text-sm font-medium text-gray-800">{job.title}</td>
                             <td className="px-4 py-4 text-sm text-gray-600">{job.company}</td>
-                            <td className="px-4 py-4 text-sm text-gray-600">{job.employer}</td>
-                            <td className="px-4 py-4 text-sm text-gray-600">{job.applications}</td>
+                            <td className="px-4 py-4 text-sm text-gray-600">{job.location}</td>
                             <td className="px-4 py-4 text-sm">
                               {job.status === 'active' ? (
                                 <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
                               ) : (
-                                <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Pending</span>
+                                <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">Closed</span>
                               )}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-600">
+                              {new Date(job.createdAt).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-4 text-sm">
                               <div className="flex gap-2">
-                                <button className="text-blue-600 hover:text-blue-800">
-                                  <FaEye />
-                                </button>
-                                <button className="text-green-600 hover:text-green-800">
+                                <button 
+                                  onClick={() => toggleJobStatus(job._id, job.status)}
+                                  className="text-green-600 hover:text-green-800"
+                                  title={job.status === 'active' ? 'Close Job' : 'Activate Job'}
+                                >
                                   <FaEdit />
                                 </button>
-                                <button className="text-red-600 hover:text-red-800">
+                                <button 
+                                  onClick={() => deleteJob(job._id)}
+                                  className="text-red-600 hover:text-red-800"
+                                  title="Delete Job"
+                                >
                                   <FaTrash />
                                 </button>
                               </div>
@@ -189,10 +495,38 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
-                </div>
+                )}
+              </div>
+            )}
 
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Users</h3>
+            {activeTab === 'users' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-gray-800">All Users ({allUsers.length})</h3>
+                  <div className="flex gap-3">
+                    <select 
+                      value={userTypeFilter}
+                      onChange={(e) => setUserTypeFilter(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="employer">Employers</option>
+                      <option value="seeker">Seekers</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={userSearchTerm}
+                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                {allUsers.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    No users found. {userSearchTerm || userTypeFilter !== 'all' ? 'Try adjusting your filters.' : ''}
+                  </div>
+                ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
@@ -200,13 +534,13 @@ export default function AdminDashboard() {
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Joined</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Joined</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {recentUsers.map((user) => (
+                        {allUsers.map((user) => (
                           <tr key={user._id} className="hover:bg-gray-50">
                             <td className="px-4 py-4 text-sm font-medium text-gray-800">{user.name}</td>
                             <td className="px-4 py-4 text-sm text-gray-600">{user.email}</td>
@@ -219,23 +553,24 @@ export default function AdminDashboard() {
                                 {user.type === 'employer' ? 'Employer' : 'Seeker'}
                               </span>
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-600">
-                              {new Date(user.joined).toLocaleDateString()}
-                            </td>
                             <td className="px-4 py-4 text-sm">
-                              {user.status === 'active' ? (
-                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
+                              {user.status === 'banned' ? (
+                                <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Banned</span>
                               ) : (
-                                <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Pending</span>
+                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
                               )}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-600">
+                              {new Date(user.createdAt).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-4 text-sm">
                               <div className="flex gap-2">
-                                <button className="text-blue-600 hover:text-blue-800">
-                                  <FaEye />
-                                </button>
-                                <button className="text-red-600 hover:text-red-800">
-                                  <FaBan />
+                                <button 
+                                  onClick={() => toggleUserStatus(user._id, user.type, user.status || 'active')}
+                                  className={user.status === 'banned' ? 'text-green-600 hover:text-green-800' : 'text-red-600 hover:text-red-800'}
+                                  title={user.status === 'banned' ? 'Unban User' : 'Ban User'}
+                                >
+                                  {user.status === 'banned' ? <FaCheckCircle /> : <FaBan />}
                                 </button>
                               </div>
                             </td>
@@ -244,54 +579,7 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'jobs' && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-800">All Jobs</h3>
-                  <div className="flex gap-3">
-                    <select className="border border-gray-300 rounded-lg px-4 py-2 text-sm">
-                      <option>All Status</option>
-                      <option>Active</option>
-                      <option>Pending</option>
-                      <option>Closed</option>
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Search jobs..."
-                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="text-center py-12 text-gray-500">
-                  Jobs management interface - Full CRUD operations available
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'users' && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-800">All Users</h3>
-                  <div className="flex gap-3">
-                    <select className="border border-gray-300 rounded-lg px-4 py-2 text-sm">
-                      <option>All Types</option>
-                      <option>Employers</option>
-                      <option>Seekers</option>
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Search users..."
-                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="text-center py-12 text-gray-500">
-                  User management interface - View, edit, ban/unban users
-                </div>
+                )}
               </div>
             )}
 
@@ -303,20 +591,20 @@ export default function AdminDashboard() {
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
                     <div className="flex items-center gap-3 mb-3">
                       <FaCalendar className="text-blue-600 text-2xl" />
-                      <h4 className="font-semibold text-gray-800">This Month</h4>
+                      <h4 className="font-semibold text-gray-800">Platform Stats</h4>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">New Jobs:</span>
-                        <span className="font-semibold">42</span>
+                        <span className="text-gray-600">Total Jobs:</span>
+                        <span className="font-semibold">{stats.totalJobs}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">New Users:</span>
-                        <span className="font-semibold">156</span>
+                        <span className="text-gray-600">Active Jobs:</span>
+                        <span className="font-semibold">{stats.activeJobs}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Applications:</span>
-                        <span className="font-semibold">892</span>
+                        <span className="text-gray-600">Total Users:</span>
+                        <span className="font-semibold">{stats.totalUsers}</span>
                       </div>
                     </div>
                   </div>
@@ -324,20 +612,20 @@ export default function AdminDashboard() {
                   <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6">
                     <div className="flex items-center gap-3 mb-3">
                       <FaCheckCircle className="text-green-600 text-2xl" />
-                      <h4 className="font-semibold text-gray-800">Success Rate</h4>
+                      <h4 className="font-semibold text-gray-800">User Distribution</h4>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Job Fill Rate:</span>
-                        <span className="font-semibold">68%</span>
+                        <span className="text-gray-600">Employers:</span>
+                        <span className="font-semibold">{stats.totalEmployers}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">User Satisfaction:</span>
-                        <span className="font-semibold">4.6/5</span>
+                        <span className="text-gray-600">Job Seekers:</span>
+                        <span className="font-semibold">{stats.totalSeekers}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Platform Growth:</span>
-                        <span className="font-semibold">+23%</span>
+                        <span className="text-gray-600">Active Rate:</span>
+                        <span className="font-semibold">100%</span>
                       </div>
                     </div>
                   </div>
@@ -349,16 +637,16 @@ export default function AdminDashboard() {
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">This Month:</span>
+                        <span className="text-gray-600">Total Revenue:</span>
                         <span className="font-semibold">{stats.revenue}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Last Month:</span>
-                        <span className="font-semibold">$10,230</span>
+                        <span className="text-gray-600">Applications:</span>
+                        <span className="font-semibold">{stats.totalApplications}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Growth:</span>
-                        <span className="font-semibold text-green-600">+21.7%</span>
+                        <span className="text-gray-600">Platform:</span>
+                        <span className="font-semibold text-green-600">Growing</span>
                       </div>
                     </div>
                   </div>

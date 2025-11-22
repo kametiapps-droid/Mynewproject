@@ -7,6 +7,7 @@ const EmployerSchema = new Schema({
   company: { type: String, required: true },
   phone: { type: String },
   website: { type: String },
+  status: { type: String, default: 'active', enum: ['active', 'banned'] },
 }, { timestamps: true });
 
 export default models.Employer || model('Employer', EmployerSchema);
