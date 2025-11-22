@@ -289,10 +289,10 @@ export default function AdminDashboard() {
 
         <div className="bg-white rounded-xl shadow-md mb-8">
           <div className="border-b border-gray-200">
-            <div className="flex gap-4 px-6">
+            <div className="flex gap-2 md:gap-4 px-4 md:px-6 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`py-4 px-4 font-semibold transition-all ${
+                className={`py-4 px-3 md:px-4 font-semibold transition-all whitespace-nowrap text-sm md:text-base ${
                   activeTab === 'overview'
                     ? 'border-b-2 border-gray-800 text-gray-800'
                     : 'text-gray-500 hover:text-gray-700'
@@ -302,7 +302,7 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab('jobs')}
-                className={`py-4 px-4 font-semibold transition-all ${
+                className={`py-4 px-3 md:px-4 font-semibold transition-all whitespace-nowrap text-sm md:text-base ${
                   activeTab === 'jobs'
                     ? 'border-b-2 border-gray-800 text-gray-800'
                     : 'text-gray-500 hover:text-gray-700'
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab('users')}
-                className={`py-4 px-4 font-semibold transition-all ${
+                className={`py-4 px-3 md:px-4 font-semibold transition-all whitespace-nowrap text-sm md:text-base ${
                   activeTab === 'users'
                     ? 'border-b-2 border-gray-800 text-gray-800'
                     : 'text-gray-500 hover:text-gray-700'
@@ -322,7 +322,7 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab('analytics')}
-                className={`py-4 px-4 font-semibold transition-all ${
+                className={`py-4 px-3 md:px-4 font-semibold transition-all whitespace-nowrap text-sm md:text-base ${
                   activeTab === 'analytics'
                     ? 'border-b-2 border-gray-800 text-gray-800'
                     : 'text-gray-500 hover:text-gray-700'
