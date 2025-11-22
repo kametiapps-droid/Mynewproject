@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     allowedDevOrigins: [
       'https://*.replit.dev',
       'https://*.repl.co',
-      'https://*.spock.replit.dev',
+      '*://*.spock.replit.dev',
     ],
   },
   async headers() {
